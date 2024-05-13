@@ -47,3 +47,33 @@ def plot_predictions(actual, predicted):
     plt.legend()
     plt.show()
 
+if _name_ == "_main_":
+    # Define stock symbol and date range
+    stock_symbol = "AAPL"  # Example: Apple
+    start_date = "2020-01-01"
+    end_date = "2021-01-01"
+
+    # Download stock price data
+    data = download_stock_data(stock_symbol, start_date, end_date)
+
+    # Prepare data for the neural network
+    X, y = prepare_data(data["Close"], look_back=10)
+
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Build and train the neural network model
+    model = build_model(input_shape=X_train.shape[1])
+    model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1)
+
+    # Evaluate the model
+    loss = model.evaluate(X_test, y_test)
+    print("Test Loss:", loss)
+
+    # Make predictions
+    predicted = model.predict(X_test)
+
+    # Plot actual vs predicted prices
+    plot_predictions(y_test, predicted)
