@@ -47,7 +47,7 @@ def plot_predictions(actual, predicted):
     plt.legend()
     plt.show()
 
-if __name__ == "main":
+if __name__ == "__main__":
     # Define stock symbol and date range
     stock_symbol = "AAPL"  # Example: Apple
     start_date = "2020-01-01"
