@@ -25,3 +25,25 @@ def prepare_data(data, look_back=1):
         y.append(scaled_data[i + look_back, 0])
 
     return np.array(X), np.array(y)
+
+
+# Build and train the neural network model
+def build_model(input_shape):
+    model = Sequential()
+    model.add(Dense(64, input_shape=(input_shape,), activation="relu"))
+    model.add(Dense(32, activation="relu"))
+    model.add(Dense(1, activation="linear"))
+    model.compile(optimizer="adam", loss="mean_squared_error")
+    return model
+
+
+# Plot actual vs predicted prices
+def plot_predictions(actual, predicted):
+    plt.plot(actual, label="Actual", color="blue")
+    plt.plot(predicted, label="Predicted", color="red")
+    plt.xlabel("Time")
+    plt.ylabel("Close Price")
+    plt.title("Stock Price Prediction with Neural Network")
+    plt.legend()
+    plt.show()
+
