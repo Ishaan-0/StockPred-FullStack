@@ -3,10 +3,10 @@ import pandas as pd
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from keras.models import Sequential
-from keras.layers import Dense, LSTM
+from keras.layers import Dense
 import matplotlib.pyplot as plt
-
 
 # Download historical stock price data from Yahoo Finance
 def download_stock_data(symbol, start_date, end_date):
@@ -47,13 +47,9 @@ def plot_predictions(actual, predicted):
     plt.legend()
     plt.show()
 
-if __name__ == "__main__":
-    # Define stock symbol and date range
-    stock_symbol = "AAPL"  # Example: Apple
-    start_date = "2020-01-01"
-    end_date = "2021-01-01"
 
-    # Download stock price data
+
+def return_prediction(stock_symbol, start_date, end_date):
     data = download_stock_data(stock_symbol, start_date, end_date)
 
     # Prepare data for the neural network
@@ -69,11 +65,14 @@ if __name__ == "__main__":
     model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1)
 
     # Evaluate the model
-    loss = model.evaluate(X_test, y_test)
-    print("Test Loss:", loss)
+    
+
 
     # Make predictions
     predicted = model.predict(X_test)
+    mse = mean_squared_error(y_test, predicted)
+    accuracy = (1 - mse) * 100
+    return (predicted, accuracy)
 
-    # Plot actual vs predicted prices
-    plot_predictions(y_test, predicted)
+predicted_value = return_prediction("AAPL", "2021-10-10", "2021-11-10")
+print(predicted_value)
