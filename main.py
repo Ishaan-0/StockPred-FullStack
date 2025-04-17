@@ -1,18 +1,17 @@
 import numpy as np
-import pandas as pd
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import mean_squared_error 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Input
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # Download historical stock price data from Yahoo Finance
 def download_stock_data(symbol, user_input_date):
     end_date = user_input_date
-    start_date = end_date - timedelta(days = 14) # taking the start date as two weeks earlier 
+    start_date = end_date - timedelta(days = 30) # taking 30 days as start to account for weekends 
     if end_date.weekday() == 5:
         end_date = (end_date - timedelta(days=1)).strftime("%Y-%m-%d")
     elif end_date.weekday() == 6:
@@ -37,11 +36,12 @@ def prepare_data(data, look_back=3):
 # Build and train the neural network model
 def build_model(input_shape):
     model = Sequential()
-    model.add(LSTM(Dense(128, input_shape=(input_shape, 1), activation="tanh")))
+    model.add(Input(shape = (input_shape, 1)))
+    model.add(LSTM(128, input_shape=(input_shape, 1), activation="tanh", return_sequences=True))
     model.add(Dropout(0.2))
-    model.add(LSTM(Dense(64, activation="tanh")))
+    model.add(LSTM(64, activation="tanh", return_sequences=True))
     model.add(Dropout(0.2))
-    model.add(LSTM(Dense(32, activation="tanh")))
+    model.add(LSTM(32, activation="tanh"))
     model.add(Dropout(0.2))
     model.add(Dense(1, activation="linear"))
     model.compile(optimizer="adam", loss="mean_squared_error")
@@ -81,8 +81,11 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
     # Prepare data for the neural network
     look_back = 10
     X, y, scaler = prepare_data(data["Close"], look_back=look_back)
+    if X.shape[0] == 0:
+        raise ValueError("Not enough data to create sequences. Try increasing the date range or reducing `look_back`.")
 
     X = X.reshape(X.shape[0], X.shape[1], 1)  # Reshape for LSTM input
+    print(f"Shape of X: {X.shape}")
     
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
@@ -95,7 +98,7 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
 
     # Evaluate the model
     predicted = model.predict(X_test)
-    mse = mse(y_test, predicted)
+    mse = mean_squared_error(y_test, predicted)
     accuracy = (1 - mse) * 100
     
     #Predict future stock prices
