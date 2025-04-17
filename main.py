@@ -3,19 +3,26 @@ import pandas as pd
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from keras.models import Sequential
-from keras.layers import Dense
+from sklearn.metrics import mean_squared_error as mse
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
 # Download historical stock price data from Yahoo Finance
-def download_stock_data(symbol, start_date, end_date):
+def download_stock_data(symbol, user_input_date):
+    end_date = user_input_date
+    start_date = end_date - timedelta(days = 14) # taking the start date as two weeks earlier 
+    if end_date.weekday() == 5:
+        end_date = (end_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    elif end_date.weekday() == 6:
+        end_date = (end_date - timedelta(days=2)).strftime("%Y-%m-%d")
     data = yf.download(symbol, start=start_date, end=end_date)
     return data
 
 
 # Prepare data for the neural network
-def prepare_data(data, look_back=1):
+def prepare_data(data, look_back=3):
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data.values.reshape(-1, 1))
 
@@ -24,55 +31,84 @@ def prepare_data(data, look_back=1):
         X.append(scaled_data[i : (i + look_back), 0])
         y.append(scaled_data[i + look_back, 0])
 
-    return np.array(X), np.array(y)
+    return np.array(X), np.array(y), scaler
 
 
 # Build and train the neural network model
 def build_model(input_shape):
     model = Sequential()
-    model.add(Dense(64, input_shape=(input_shape,), activation="relu"))
-    model.add(Dense(32, activation="relu"))
+    model.add(LSTM(Dense(128, input_shape=(input_shape, 1), activation="tanh")))
+    model.add(Dropout(0.2))
+    model.add(LSTM(Dense(64, activation="tanh")))
+    model.add(Dropout(0.2))
+    model.add(LSTM(Dense(32, activation="tanh")))
+    model.add(Dropout(0.2))
     model.add(Dense(1, activation="linear"))
     model.compile(optimizer="adam", loss="mean_squared_error")
     return model
 
 
 # Plot actual vs predicted prices
-def plot_predictions(actual, predicted):
+'''def plot_predictions(actual, predicted):
     plt.plot(actual, label="Actual", color="blue")
     plt.plot(predicted, label="Predicted", color="red")
     plt.xlabel("Time")
     plt.ylabel("Close Price")
     plt.title("Stock Price Prediction with Neural Network")
     plt.legend()
-    plt.show()
+    plt.show()'''
 
 
+def predict_future_days(model, recent_data, look_back, future_days, scaler):
+    predicted_prices = []
 
-def return_prediction(stock_symbol, start_date, end_date):
-    data = download_stock_data(stock_symbol, start_date, end_date)
+    for _ in range(future_days):
+        input_data = np.array(recent_data[-look_back:]).reshape(1, look_back, 1)
+        predicted_scaled = model.predict(input_data, verbose=0)
+        predicted_price = scaler.inverse_transform(predicted_scaled.reshape(-1, 1))[0, 0]
+        predicted_prices.append(predicted_price)
+
+        # Update recent_data with the predicted scaled value
+        scaled_price = scaler.transform(np.array([[predicted_price]]))[0, 0]
+        recent_data = np.append(recent_data, scaled_price)
+
+    return predicted_prices
+
+
+def return_prediction(stock_symbol, user_input_date, no_of_days):
+    data = download_stock_data(stock_symbol, user_input_date)
 
     # Prepare data for the neural network
-    X, y = prepare_data(data["Close"], look_back=10)
+    look_back = 10
+    X, y, scaler = prepare_data(data["Close"], look_back=look_back)
 
+    X = X.reshape(X.shape[0], X.shape[1], 1)  # Reshape for LSTM input
+    
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
     # Build and train the neural network model
-    model = build_model(input_shape=X_train.shape[1])
-    model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1)
+    model = build_model(input_shape=look_back)
+    model.fit(X_train, y_train, epochs=15, batch_size=32, verbose=1)
 
     # Evaluate the model
-    
-
-
-    # Make predictions
     predicted = model.predict(X_test)
-    mse = mean_squared_error(y_test, predicted)
+    mse = mse(y_test, predicted)
     accuracy = (1 - mse) * 100
-    return (predicted, accuracy)
+    
+    #Predict future stock prices
+    recent_data = scaler.transform(data["Close"].values.reshape(-1, 1)).flatten()
+    future_prices = predict_future_days(model, recent_data, look_back, no_of_days, scaler)
+    
+    return (future_prices, accuracy)
 
-predicted_value = return_prediction("AAPL", "2021-10-10", "2021-11-10")
-print(predicted_value)
+# Example 
+if __name__ == "__main__":
+    user_date = datetime.today()
+    future_days = 3
+
+    predicted_prices, accuracy = return_prediction("AAPL", user_date, future_days)
+    print(f"Predicted Prices for the next {future_days} days: {predicted_prices}")
+    print(f"Accuracy: {accuracy:.2f}%")
