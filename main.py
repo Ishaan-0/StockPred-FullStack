@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 # Download historical stock price data from Yahoo Finance
 def download_stock_data(symbol, user_input_date):
     end_date = user_input_date
-    start_date = end_date - timedelta(days = 30) # taking 30 days as start to account for weekends 
+    start_date = end_date - timedelta(days = 60) # taking 30 days as start to account for weekends 
     if end_date.weekday() == 5:
         end_date = (end_date - timedelta(days=1)).strftime("%Y-%m-%d")
     elif end_date.weekday() == 6:
@@ -72,14 +72,14 @@ def predict_future_days(model, recent_data, look_back, future_days, scaler):
         scaled_price = scaler.transform(np.array([[predicted_price]]))[0, 0]
         recent_data = np.append(recent_data, scaled_price)
 
-    return predicted_prices
+    return [round(float(price), 2) for price in predicted_prices]
 
 
 def return_prediction(stock_symbol, user_input_date, no_of_days):
     data = download_stock_data(stock_symbol, user_input_date)
 
     # Prepare data for the neural network
-    look_back = 10
+    look_back = 20
     X, y, scaler = prepare_data(data["Close"], look_back=look_back)
     if X.shape[0] == 0:
         raise ValueError("Not enough data to create sequences. Try increasing the date range or reducing `look_back`.")
