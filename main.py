@@ -12,12 +12,17 @@ from datetime import datetime, timedelta
 # Download historical stock price data from Yahoo Finance
 def download_stock_data(symbol, user_input_date):
     end_date = user_input_date
-    start_date = end_date - timedelta(days = 14) # taking the start date as two weeks earlier 
+    start_date = end_date - timedelta(days=31)  # Get 1 year of data instead of 14 days
     if end_date.weekday() == 5:
         end_date = (end_date - timedelta(days=1)).strftime("%Y-%m-%d")
     elif end_date.weekday() == 6:
         end_date = (end_date - timedelta(days=2)).strftime("%Y-%m-%d")
+    else:
+        end_date = end_date.strftime("%Y-%m-%d")  # Format the date properly
+
+    print(f"Downloading data from {start_date} to {end_date}")
     data = yf.download(symbol, start=start_date, end=end_date)
+    print(f"Downloaded {len(data)} data points")
     return data
 
 
@@ -37,13 +42,13 @@ def prepare_data(data, look_back=3):
 # Build and train the neural network model
 def build_model(input_shape):
     model = Sequential()
-    model.add(LSTM(Dense(128, input_shape=(input_shape, 1), activation="tanh")))
+    model.add(LSTM(128, return_sequences=True, input_shape=(input_shape, 1)))
     model.add(Dropout(0.2))
-    model.add(LSTM(Dense(64, activation="tanh")))
+    model.add(LSTM(64, return_sequences=True))
     model.add(Dropout(0.2))
-    model.add(LSTM(Dense(32, activation="tanh")))
+    model.add(LSTM(32))
     model.add(Dropout(0.2))
-    model.add(Dense(1, activation="linear"))
+    model.add(Dense(1))
     model.compile(optimizer="adam", loss="mean_squared_error")
     return model
 
@@ -78,12 +83,26 @@ def predict_future_days(model, recent_data, look_back, future_days, scaler):
 def return_prediction(stock_symbol, user_input_date, no_of_days):
     data = download_stock_data(stock_symbol, user_input_date)
 
+    if len(data) < 20:  # Not enough data for meaningful prediction
+        print(f"Not enough data points. Got only {len(data)} rows.")
+        return None, None
+
+
     # Prepare data for the neural network
     look_back = 10
     X, y, scaler = prepare_data(data["Close"], look_back=look_back)
 
+    # Check the shape of X before reshaping
+    print(f"X shape before reshape: {X.shape}")
+    # Make sure X is 2D before reshaping
+    if len(X.shape) == 1:
+        X = X.reshape(-1, 1)
+        # Need to set look_back to 1 or adjust model accordingly
+        look_back = 1
+    X = X.reshape(X.shape[0], look_back, 1)  # Reshape for LSTM input
+
     X = X.reshape(X.shape[0], X.shape[1], 1)  # Reshape for LSTM input
-    
+
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
@@ -95,16 +114,16 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
 
     # Evaluate the model
     predicted = model.predict(X_test)
-    mse = mse(y_test, predicted)
-    accuracy = (1 - mse) * 100
-    
+    mse_value = mse(y_test, predicted)
+    accuracy = (1 - mse_value) * 100
+
     #Predict future stock prices
     recent_data = scaler.transform(data["Close"].values.reshape(-1, 1)).flatten()
     future_prices = predict_future_days(model, recent_data, look_back, no_of_days, scaler)
-    
+
     return (future_prices, accuracy)
 
-# Example 
+# Example
 if __name__ == "__main__":
     user_date = datetime.today()
     future_days = 3
