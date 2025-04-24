@@ -1,31 +1,30 @@
 "use client";
+import ClientDatePicker from "@/components/ClientDataPicker";
 import { TextField, Button, Autocomplete } from "@mui/material";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
-import React, { useEffect } from "react";
-
-const symbols = ["AAPL"];
+import { useEffect, useState } from "react";
 
 interface StockData {
-  historical_data: number[];
-  stock_prices: number[];
+  historical_data: { date: string; price: number }[];
+  predicted_data: number[];
   accuracy: number;
-} // {"historical_data": [1, 1, 1] , "stock_prices":[1, 1, 1], "accuracy": 0.99}
+} // {"historical_data": [{date: "2024-04-1", price: 1}, {date: "2024-04-2", price: 2}, {date: "2024-04-3", price: 3}] , "predicted_data" : [1, 1, 1], "accuracy": 0.99}
 
 export default function Home() {
-  const [stockData, setStockData] = React.useState<StockData | null>(null);
+  const [stockData, setStockData] = useState<StockData | null>(null);
+  const [start_date, setStartDate] = useState(dayjs());
+  const [end_date, setEndDate] = useState(dayjs().add(10, "day"));
+  const [datesArr, setDates] = useState<string[]>([]);
+  const [pred_data, setPredData] = useState<(null | number)[]>([]);
 
   async function submissionHandle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); // prevents reload of page
     const symbol = event.currentTarget["symbol"].value;
-    const start_date = dayjs(event.currentTarget["start_date"].value).format(
-      "YYYY-MM-DD",
-    );
-    const end_date = dayjs(event.currentTarget["end_date"].value).format(
-      "YYYY-MM-DD",
-    );
+    const start_date = event.currentTarget["start_date"].value;
+    const end_date = event.currentTarget["end_date"].value;
     console.log(symbol, start_date, end_date);
 
     const days = Math.floor(
@@ -45,71 +44,96 @@ export default function Home() {
     setStockData(parsedData);
   }
 
-  // useEffect(() => {
-  //   if (stockData) {
-  //     const parsedData =
-  //       typeof stockData === "string" ? JSON.parse(stockData) : stockData;
-  //     console.log("historical_data:", parsedData.historical_data);
-  //   }
-  // }, [stockData]);
+  useEffect(() => {
+    if (stockData) {
+      const dates: string[] = [];
+      const pred: (number | null)[] = [];
+      const hist = stockData?.historical_data;
+      const current_date = start_date;
+      hist.map((p, i) => {
+        if (i === hist.length - 1) {
+          dates.push(current_date.format("YYYY-MM-DD"));
+          pred.push(p.price);
+        } else {
+          dates.push(p.date);
+          pred.push(null);
+        }
+      });
+      const predicted_data = stockData?.predicted_data;
+      predicted_data.map((p, i) => {
+        dates.push(current_date.add(i, "day").format("YYYY-MM-DD"));
+        pred.push(p);
+      });
+      setDates(dates);
+      setPredData(pred);
+    }
+  }, [stockData]);
+
+  useEffect(() => {
+    console.log(datesArr);
+  }, [datesArr]);
 
   return (
-    <main className="flex flex-col gap-2 items-center w-screen h-screen overflow-auto">
-      <h1 className="text-4xl text-center font-semibold p-4">
-        Stock Prediction
-      </h1>
+    <main className="flex flex-col py-8 gap-2 items-center w-screen h-screen overflow-auto">
+      <h1 className="text-4xl text-center font-semibold">Stock Prediction</h1>
       <p className="text-slate-600">
         This is a stock prediction app. It uses machine learning to predict the
         stock prices.
       </p>
-      <div className="flex gap-4 w-8/10 mt-4">
-        <form
-          className="flex flex-col gap-3 w-4/10"
-          onSubmit={submissionHandle}
-        >
+      <form className="grid grid-cols-2 gap-3 py-4" onSubmit={submissionHandle}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
           <TextField
             name="symbol"
             variant="outlined"
             required
             label="Stock Symbol"
           />
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Start Date"
-              name="start_date"
-              defaultValue={dayjs()}
-            />
-            <DatePicker
-              label="End Date"
-              name="end_date"
-              defaultValue={dayjs().add(4, "day")}
-            />
-          </LocalizationProvider>
+          <ClientDatePicker
+            label="Start Date"
+            name="start_date"
+            format="YYYY-MM-DD"
+            value={start_date}
+            onChange={(newValue) => setStartDate(dayjs(newValue))}
+          />
+          <ClientDatePicker
+            label="End Date"
+            name="end_date"
+            format="YYYY-MM-DD"
+            value={end_date}
+            onChange={(newValue) => setEndDate(dayjs(newValue))}
+          />
           <Button type="submit" variant="contained">
             Submit
           </Button>
-        </form>
-        <div>
-          {stockData && (
-            <LineChart
-              xAxis={[
-                { data: stockData.historical_data.map((d, i) => i) },
-                { data: stockData.stock_prices.map((d, i) => i) },
-              ]}
-              series={[
-                { data: stockData.historical_data },
-                { data: stockData.stock_prices },
-              ]}
-              height={300}
-              width={600}
-            />
-          )}
-        </div>
-      </div>
+        </LocalizationProvider>
+      </form>
+      {stockData && datesArr.length > 0 && pred_data && (
+        <>
+          <LineChart
+            xAxis={[
+              {
+                data: datesArr.map((d) => dayjs(d)),
+                valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
+              },
+            ]}
+            series={[
+              {
+                data: stockData.historical_data.map((d) => d.price),
+                showMark: false,
+              },
+              { data: pred_data.map((d) => d), showMark: false },
+            ]}
+            height={500}
+            width={1000}
+          />
+          <p>
+            <b>Accuracy of Model:</b> {stockData.accuracy.toLocaleString()}%
+          </p>
+        </>
+      )}
 
-      <footer className="fixed py-1.5 px-3 rounded-full bottom-2 right-2 bg-slate-700 text-white">
-        The predictions are in no way shape or form any financial advice,
-        bakchodi mat karo paiso ke saath
+      <footer className="fixed py-1.5 px-3 rounded-full bottom-2 right-2 bg-slate-700 text-white text-xs">
+        The predictions are in no way shape or form any financial advice.
       </footer>
     </main>
   );
