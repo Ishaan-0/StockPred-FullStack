@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const raw = JSON.stringify({
         "symbol": data.symbol,
         "start_date": data.start_date,
-        "end_date": data.end_date
+        "days": data.days
     });
 
     const requestOptions = {

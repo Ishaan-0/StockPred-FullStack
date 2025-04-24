@@ -13,6 +13,7 @@ class Item(BaseModel):
     days: int = 3  # no.of days that the user inputs, if no input then default is 3 days
 
 class PredictionResponse(BaseModel):
+    historical_data: List[float]
     stock_prices: List[float]
     accuracy: float
 
@@ -68,8 +69,13 @@ def create_item(item: Item):
             accuracy = float(predicted_value[1])
     else:
         accuracy = 0.0
+        
+    if predicted_value[2] is not None: 
+        historical_data = [float(price[0]) for price in predicted_value[2]]
+    else:
+        historical_data = []
 
-    return PredictionResponse(stock_prices=stock_prices, accuracy=accuracy)
+    return PredictionResponse(stock_prices=stock_prices, accuracy=accuracy, historical_data = historical_data)
 
 # Add this part to run the server when the file is executed directly
 if __name__ == "__main__":
