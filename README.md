@@ -12,7 +12,7 @@ The repository also showcases a web app that uses Next.js and REST APIs to get d
 
 ## Usage
 
-To use the algorithm:
+To use the algorithm and web app:
 
 1. Clone the repository to your local machine.
 2. Follow the steps listed in frontend/README.md and backend/README.md
