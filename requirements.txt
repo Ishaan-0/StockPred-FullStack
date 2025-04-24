@@ -4,3 +4,7 @@ yfinance
 matplotlib
 tensorflow
 scikit-learn
+fastapi
+uvicorn
+pydantic
+pysqlite3

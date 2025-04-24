@@ -11,12 +11,17 @@ from datetime import datetime, timedelta
 # Download historical stock price data from Yahoo Finance
 def download_stock_data(symbol, user_input_date):
     end_date = user_input_date
-    start_date = end_date - timedelta(days = 60) # taking 30 days as start to account for weekends 
+    start_date = end_date - timedelta(days=31)  # Get 1 year of data instead of 14 days
     if end_date.weekday() == 5:
         end_date = (end_date - timedelta(days=1)).strftime("%Y-%m-%d")
     elif end_date.weekday() == 6:
         end_date = (end_date - timedelta(days=2)).strftime("%Y-%m-%d")
+    else:
+        end_date = end_date.strftime("%Y-%m-%d")  # Format the date properly
+
+    print(f"Downloading data from {start_date} to {end_date}")
     data = yf.download(symbol, start=start_date, end=end_date)
+    print(f"Downloaded {len(data)} data points")
     return data
 
 
@@ -43,7 +48,7 @@ def build_model(input_shape):
     model.add(Dropout(0.2))
     model.add(LSTM(32, activation="tanh"))
     model.add(Dropout(0.2))
-    model.add(Dense(1, activation="linear"))
+    model.add(Dense(1))
     model.compile(optimizer="adam", loss="mean_squared_error")
     return model
 
@@ -78,11 +83,23 @@ def predict_future_days(model, recent_data, look_back, future_days, scaler):
 def return_prediction(stock_symbol, user_input_date, no_of_days):
     data = download_stock_data(stock_symbol, user_input_date)
 
+    if len(data) < 20:  # Not enough data for meaningful prediction
+        print(f"Not enough data points. Got only {len(data)} rows.")
+        return None, None
+
+
     # Prepare data for the neural network
     look_back = 20
     X, y, scaler = prepare_data(data["Close"], look_back=look_back)
-    if X.shape[0] == 0:
-        raise ValueError("Not enough data to create sequences. Try increasing the date range or reducing `look_back`.")
+
+    # Check the shape of X before reshaping
+    print(f"X shape before reshape: {X.shape}")
+    # Make sure X is 2D before reshaping
+    if len(X.shape) == 1:
+        X = X.reshape(-1, 1)
+        # Need to set look_back to 1 or adjust model accordingly
+        look_back = 1
+    X = X.reshape(X.shape[0], look_back, 1)  # Reshape for LSTM input
 
     X = X.reshape(X.shape[0], X.shape[1], 1)  # Reshape for LSTM input
     print(f"Shape of X: {X.shape}")
@@ -98,16 +115,16 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
 
     # Evaluate the model
     predicted = model.predict(X_test)
-    mse = mean_squared_error(y_test, predicted)
-    accuracy = (1 - mse) * 100
-    
+    mse_value = mse(y_test, predicted)
+    accuracy = (1 - mse_value) * 100
+
     #Predict future stock prices
     recent_data = scaler.transform(data["Close"].values.reshape(-1, 1)).flatten()
     future_prices = predict_future_days(model, recent_data, look_back, no_of_days, scaler)
-    
+
     return (future_prices, accuracy)
 
-# Example 
+# Example
 if __name__ == "__main__":
     user_date = datetime.today()
     future_days = 3
