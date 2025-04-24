@@ -1,6 +1,8 @@
-# Stock Prediction Algorithm
+# Stock Prediction Algorithm and Web App
 
 This repository contains a stock prediction algorithm developed using machine learning techniques. It predicts the future price movements of stocks based on historical data.
+
+The repository also showcases a web app that uses Next.js and REST APIs to get data from the machine learning algorithm and predict stock values and display them in a graphical format.
 
 ## Description
 
@@ -13,7 +15,7 @@ This repository contains a stock prediction algorithm developed using machine le
 To use the algorithm:
 
 1. Clone the repository to your local machine.
-2. Install the required dependencies.
+2. Follow the steps listed in frontend/README.md and backend/README.md
 3. Run the prediction script with appropriate parameters.
 
 
