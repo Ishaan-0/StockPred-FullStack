@@ -11,6 +11,7 @@ interface StockData {
   historical_data: { date: string; price: number }[];
   predicted_data: number[];
   accuracy: number;
+  error?: string;
 } // {"historical_data": [{date: "2024-04-1", price: 1}, {date: "2024-04-2", price: 2}, {date: "2024-04-3", price: 3}] , "predicted_data" : [1, 1, 1], "accuracy": 0.99}
 
 export default function Home() {
@@ -19,9 +20,11 @@ export default function Home() {
   const [end_date, setEndDate] = useState(dayjs().add(10, "day"));
   const [datesArr, setDates] = useState<string[]>([]);
   const [pred_data, setPredData] = useState<(null | number)[]>([]);
+  const [buttonDisable, setButtonDisable] = useState(false);
 
   async function submissionHandle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); // prevents reload of page
+    setButtonDisable(true);
     const symbol = event.currentTarget["symbol"].value;
     const start_date = event.currentTarget["start_date"].value;
     const end_date = event.currentTarget["end_date"].value;
@@ -32,20 +35,23 @@ export default function Home() {
         (1000 * 60 * 60 * 24),
     );
 
-    const res = await fetch("/api/prediction", {
+    fetch("/api/prediction", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ symbol, start_date, days }),
-    });
-    const data = await res.json();
-    const parsedData = JSON.parse(data);
-    setStockData(parsedData);
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const parsedData = JSON.parse(data);
+        setStockData(parsedData);
+        setButtonDisable(false);
+      });
   }
 
   useEffect(() => {
-    if (stockData) {
+    if (stockData && !stockData.error) {
       const dates: string[] = [];
       const pred: (number | null)[] = [];
       const hist = stockData?.historical_data;
@@ -102,34 +108,42 @@ export default function Home() {
             value={end_date}
             onChange={(newValue) => setEndDate(dayjs(newValue))}
           />
-          <Button type="submit" variant="contained">
+          <Button type="submit" variant="contained" disabled={buttonDisable}>
             Submit
           </Button>
         </LocalizationProvider>
       </form>
-      {stockData && datesArr.length > 0 && pred_data && (
-        <>
-          <LineChart
-            xAxis={[
-              {
-                data: datesArr.map((d) => dayjs(d)),
-                valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
-              },
-            ]}
-            series={[
-              {
-                data: stockData.historical_data.map((d) => d.price),
-                showMark: false,
-              },
-              { data: pred_data.map((d) => d), showMark: false },
-            ]}
-            height={500}
-            width={1000}
-          />
-          <p>
-            <b>Accuracy of Model:</b> {stockData.accuracy.toLocaleString()}%
-          </p>
-        </>
+      {buttonDisable ? (
+        "Loading..."
+      ) : stockData ? (
+        datesArr.length > 0 && pred_data ? (
+          <>
+            <LineChart
+              xAxis={[
+                {
+                  data: datesArr.map((d) => dayjs(d)),
+                  valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
+                },
+              ]}
+              series={[
+                {
+                  data: stockData.historical_data.map((d) => d.price),
+                  showMark: false,
+                },
+                { data: pred_data.map((d) => d), showMark: false },
+              ]}
+              height={500}
+              width={1000}
+            />
+            <p>
+              <b>Accuracy of Model:</b> {stockData.accuracy.toLocaleString()}%
+            </p>
+          </>
+        ) : (
+          "An error occurred, please try again later."
+        )
+      ) : (
+        ""
       )}
 
       <footer className="fixed py-1.5 px-3 rounded-full bottom-2 right-2 bg-slate-700 text-white text-xs">
