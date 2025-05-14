@@ -8,9 +8,9 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 
 interface StockData {
-  historical_data: { date: string; price: number }[];
-  predicted_data: number[];
-  accuracy: number;
+  historical_data?: { date: string; price: number }[];
+  predicted_data?: number[];
+  accuracy?: number;
   error?: string;
 } // {"historical_data": [{date: "2024-04-1", price: 1}, {date: "2024-04-2", price: 2}, {date: "2024-04-3", price: 3}] , "predicted_data" : [1, 1, 1], "accuracy": 0.99}
 
@@ -46,11 +46,11 @@ export default function Home() {
       .then((data) => {
         const parsedData = JSON.parse(data);
         setStockData(parsedData);
-        setButtonDisable(false);
       });
   }
 
   useEffect(() => {
+    console.log(stockData);
     if (stockData && !stockData.error) {
       const dates: string[] = [];
       const pred: (number | null)[] = [];
@@ -72,7 +72,11 @@ export default function Home() {
       });
       setDates(dates);
       setPredData(pred);
+    } else {
+      setPredData([]);
+      setDates([]);
     }
+    setButtonDisable(false);
   }, [stockData]);
 
   useEffect(() => {
@@ -116,7 +120,9 @@ export default function Home() {
       {buttonDisable ? (
         "Loading..."
       ) : stockData ? (
-        datesArr.length > 0 && pred_data ? (
+        stockData.error ? (
+          "An error occurred, please try again later."
+        ) : (
           <>
             <LineChart
               xAxis={[
@@ -127,7 +133,7 @@ export default function Home() {
               ]}
               series={[
                 {
-                  data: stockData.historical_data.map((d) => d.price),
+                  data: stockData.historical_data?.map((d) => d.price),
                   showMark: false,
                 },
                 { data: pred_data.map((d) => d), showMark: false },
@@ -136,11 +142,9 @@ export default function Home() {
               width={1000}
             />
             <p>
-              <b>Accuracy of Model:</b> {stockData.accuracy.toLocaleString()}%
+              <b>Accuracy of Model:</b> {stockData.accuracy?.toLocaleString()}%
             </p>
           </>
-        ) : (
-          "An error occurred, please try again later."
         )
       ) : (
         ""

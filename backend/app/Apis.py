@@ -27,7 +27,7 @@ def root():
 
 @app.post("/prediction/", response_model=Union[PredictionResponse, ErrorResponse])
 def create_item(item: Item):
-    from main import return_prediction
+    from backend.app.main import return_prediction
     symbol = item.symbol.upper()
 
     # Convert string date to datetime if provided
@@ -81,4 +81,4 @@ def create_item(item: Item):
 if __name__ == "__main__":
     print("Starting FastAPI server on http://127.0.0.1:8000")
     print("Access the API documentation at http://127.0.0.1:8000/docs")
-    uvicorn.run("Apis:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("Apis:app", host="0.0.0.0", port=8000, reload=True)
