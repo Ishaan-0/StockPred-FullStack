@@ -5,7 +5,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error as mse
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, Input
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # Download historical stock price data from Yahoo Finance

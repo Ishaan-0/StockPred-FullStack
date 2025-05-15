@@ -4,8 +4,18 @@ from datetime import datetime
 import uvicorn
 import numpy as np
 from typing import List, Optional, Union, Dict, Any
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class Item(BaseModel):
     symbol: str
@@ -27,7 +37,7 @@ def root():
 
 @app.post("/prediction/", response_model=Union[PredictionResponse, ErrorResponse])
 def create_item(item: Item):
-    from backend.app.main import return_prediction
+    from main import return_prediction
     symbol = item.symbol.upper()
 
     # Convert string date to datetime if provided
