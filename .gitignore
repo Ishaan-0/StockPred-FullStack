@@ -6,4 +6,4 @@
 /frontend/*.tsbuildinfo
 /frontend/next-env.d.ts
 /frontend/.vercel
-/backend/__pycache__/
+/backend/app/__pycache__/
