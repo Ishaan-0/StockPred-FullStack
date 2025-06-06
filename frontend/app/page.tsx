@@ -90,7 +90,7 @@ export default function Home() {
         This is a stock prediction app. It uses machine learning to predict the
         stock prices.
       </p>
-      <form className="grid grid-cols-2 gap-3 py-4" onSubmit={submissionHandle}>
+      <form className="grid grid-cols-3 gap-3 py-4" onSubmit={submissionHandle}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <TextField
             name="symbol"
@@ -112,7 +112,12 @@ export default function Home() {
             value={end_date}
             onChange={(newValue) => setEndDate(dayjs(newValue))}
           />
-          <Button type="submit" variant="contained" disabled={buttonDisable}>
+          <Button
+            type="submit"
+            className="col-span-3"
+            variant="contained"
+            disabled={buttonDisable}
+          >
             Submit
           </Button>
         </LocalizationProvider>
@@ -135,6 +140,8 @@ export default function Home() {
         )}
         {!buttonDisable && stockData && !stockData.error ? (
           <LineChart
+            skipAnimation
+            className="animate-entry"
             xAxis={[
               {
                 data: datesArr.map((d) => dayjs(d)),
