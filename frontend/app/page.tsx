@@ -124,12 +124,12 @@ export default function Home() {
       </form>
       <div className="relative">
         {buttonDisable ? (
-          <p className="absolute top-1/2 left-1/2 -translate-1/2 bg-white px-12 py-4 z-10">
+          <p className="absolute inset-0 flex items-center justify-center bg-white/5 backdrop-blur-sm z-10">
             Loading...
           </p>
         ) : stockData ? (
           stockData.error ? (
-            <p className="absolute top-1/2 left-1/2 -translate-1/2 bg-white text-red-500 px-12 py-4 z-10">
+            <p className="absolute inset-0 flex items-center justify-center bg-white/5 backdrop-blur-sm z-10">
               An error occurred, please try again later.
             </p>
           ) : (
@@ -160,7 +160,7 @@ export default function Home() {
           />
         ) : (
           <LineChart
-            className="opacity-40"
+            className="opacity-80"
             xAxis={[
               {
                 data: Array.from({ length: 120 }, (_, i) =>
