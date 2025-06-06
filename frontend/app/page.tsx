@@ -56,7 +56,7 @@ export default function Home() {
       const pred: (number | null)[] = [];
       const hist = stockData?.historical_data;
       const current_date = start_date;
-      hist.map((p, i) => {
+      hist?.map((p, i) => {
         if (i === hist.length - 1) {
           dates.push(current_date.format("YYYY-MM-DD"));
           pred.push(p.price);
@@ -66,7 +66,7 @@ export default function Home() {
         }
       });
       const predicted_data = stockData?.predicted_data;
-      predicted_data.map((p, i) => {
+      predicted_data?.map((p, i) => {
         dates.push(current_date.add(i, "day").format("YYYY-MM-DD"));
         pred.push(p);
       });
@@ -117,37 +117,66 @@ export default function Home() {
           </Button>
         </LocalizationProvider>
       </form>
-      {buttonDisable ? (
-        "Loading..."
-      ) : stockData ? (
-        stockData.error ? (
-          "An error occurred, please try again later."
-        ) : (
-          <>
-            <LineChart
-              xAxis={[
-                {
-                  data: datesArr.map((d) => dayjs(d)),
-                  valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
-                },
-              ]}
-              series={[
-                {
-                  data: stockData.historical_data?.map((d) => d.price),
-                  showMark: false,
-                },
-                { data: pred_data.map((d) => d), showMark: false },
-              ]}
-              height={500}
-              width={1000}
-            />
-            <p>
-              <b>Accuracy of Model:</b> {stockData.accuracy?.toLocaleString()}%
+      <div className="relative">
+        {buttonDisable ? (
+          <p className="absolute top-1/2 left-1/2 -translate-1/2 bg-white px-12 py-4 z-10">
+            Loading...
+          </p>
+        ) : stockData ? (
+          stockData.error ? (
+            <p className="absolute top-1/2 left-1/2 -translate-1/2 bg-white text-red-500 px-12 py-4 z-10">
+              An error occurred, please try again later.
             </p>
-          </>
-        )
-      ) : (
-        ""
+          ) : (
+            ""
+          )
+        ) : (
+          ""
+        )}
+        {!buttonDisable && stockData && !stockData.error ? (
+          <LineChart
+            xAxis={[
+              {
+                data: datesArr.map((d) => dayjs(d)),
+                valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
+              },
+            ]}
+            series={[
+              {
+                data: stockData.historical_data?.map((d) => d.price),
+                showMark: false,
+              },
+              { data: pred_data.map((d) => d), showMark: false },
+            ]}
+            height={500}
+            width={1000}
+          />
+        ) : (
+          <LineChart
+            className="opacity-40"
+            xAxis={[
+              {
+                data: Array.from({ length: 120 }, (_, i) =>
+                  dayjs().subtract(119 - i, "day"),
+                ),
+                valueFormatter: (value) => dayjs(value).format("YYYY-MM-DD"),
+              },
+            ]}
+            series={[
+              {
+                data: [],
+                showMark: false,
+              },
+            ]}
+            height={500}
+            width={1000}
+          />
+        )}
+      </div>
+      {stockData && (
+        <p>
+          <b>Accuracy of Model:</b> {stockData.accuracy?.toLocaleString()}%
+        </p>
       )}
 
       <footer className="fixed py-1.5 px-3 rounded-full bottom-2 right-2 bg-slate-700 text-white text-xs">

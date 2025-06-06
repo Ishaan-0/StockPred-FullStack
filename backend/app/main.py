@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error as mse
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout, Input 
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Input
 from datetime import datetime, timedelta
 import pandas as pd
 
@@ -12,7 +12,7 @@ import pandas as pd
 def download_stock_data(symbol, user_input_date):
     end_date = user_input_date
     # Get more data for better training (increased from 90 to 365 days)
-    start_date = end_date - timedelta(days=365)
+    start_date = end_date - timedelta(days=120)
 
     # Handle weekends by moving to the last trading day
     if end_date.weekday() == 5:  # Saturday
@@ -24,21 +24,21 @@ def download_stock_data(symbol, user_input_date):
     end_date_str = end_date.strftime("%Y-%m-%d")
 
     print(f"Downloading data from {start_date_str} to {end_date_str}")
-    
+
     try:
         data = yf.download(symbol, start=start_date_str, end=end_date_str)
         print(f"Downloaded {len(data)} data points")
-        
+
         # Check if data is empty
         if data.empty:
             raise ValueError(f"No data found for symbol {symbol}")
-        
+
         # Check if we have enough data
         if len(data) < 50:  # Increased minimum requirement
             raise ValueError(f"Not enough data points. Got only {len(data)} rows. Need at least 50.")
-            
+
         return data
-        
+
     except Exception as e:
         print(f"Error downloading data: {e}")
         raise
@@ -62,7 +62,7 @@ def prepare_data(data, look_back=10):
 
         print(f"Prepared data - X shape: {X.shape}, y shape: {y.shape}")
         return X, y, scaler
-        
+
     except Exception as e:
         print(f"Error preparing data: {e}")
         raise
@@ -113,7 +113,7 @@ def predict_future_days(model, recent_data, look_back, future_days, scaler):
 def return_prediction(stock_symbol, user_input_date, no_of_days):
     try:
         print(f"Starting prediction for {stock_symbol} from {user_input_date} for {no_of_days} days")
-        
+
         # Download stock data
         data = download_stock_data(stock_symbol, user_input_date)
 
@@ -124,7 +124,7 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
             close_prices = data["Close"]
             for date, price in close_prices.items():
                 hist_data.append({
-                    "date": date.strftime("%Y-%m-%d"), 
+                    "date": date.strftime("%Y-%m-%d"),
                     "price": round(float(price), 2)
                 })
         except Exception as e:
@@ -132,7 +132,7 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
             # Fallback method
             for i, (date, row) in enumerate(data.iterrows()):
                 hist_data.append({
-                    "date": date.strftime("%Y-%m-%d"), 
+                    "date": date.strftime("%Y-%m-%d"),
                     "price": round(float(row["Close"]), 2)
                 })
 
@@ -158,29 +158,29 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
 
         # Build and train the model
         model = build_model(input_shape=look_back)
-        
+
         # Reduced epochs and added validation split
         history = model.fit(
-            X_train, y_train, 
+            X_train, y_train,
             epochs=20,  # Increased epochs
             batch_size=16,  # Reduced batch size
-            validation_split=0.1, 
+            validation_split=0.1,
             verbose=1
         )
 
         # Evaluate the model
         predicted = model.predict(X_test, verbose=0)
         mse_value = mse(y_test, predicted)
-        
+
         # Calculate accuracy as percentage (using MAPE - Mean Absolute Percentage Error approach)
         # Convert back to original scale for better accuracy calculation
         y_test_original = scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
         predicted_original = scaler.inverse_transform(predicted.reshape(-1, 1)).flatten()
-        
+
         # Calculate MAPE
         mape = np.mean(np.abs((y_test_original - predicted_original) / y_test_original)) * 100
         accuracy = max(0, 100 - mape)  # Convert to accuracy percentage
-        
+
         print(f"Model MSE: {mse_value:.6f}, Accuracy: {accuracy:.2f}%")
 
         # Prepare data for future prediction
@@ -188,7 +188,7 @@ def return_prediction(stock_symbol, user_input_date, no_of_days):
 
         # Predict future stock prices
         future_prices = predict_future_days(model, scaled_data, look_back, no_of_days, scaler)
-        
+
         print(f"Predicted prices: {future_prices}")
 
         # Validate results
